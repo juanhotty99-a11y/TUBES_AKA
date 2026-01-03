@@ -5,17 +5,17 @@ import (
 	"time"
 )
 
-// 1. WADAH DATA
+const MAX = 100000
+
 type Pemain struct {
 	ID   int
 	Nama string
 	Klub string
 }
 
-// 2. ALGORITMA ITERATIF
-func BinarySearchIterative(data []Pemain, targetID int) int {
+func BinarySearchIterative(data *[MAX]Pemain, n int, targetID int) int {
 	kiri := 0
-	kanan := len(data) - 1
+	kanan := n - 1
 
 	for kiri <= kanan {
 		tengah := kiri + (kanan-kiri)/2
@@ -32,8 +32,7 @@ func BinarySearchIterative(data []Pemain, targetID int) int {
 	return -1
 }
 
-// 3. ALGORITMA REKURSIF
-func BinarySearchRecursive(data []Pemain, targetID int, kiri int, kanan int) int {
+func BinarySearchRecursive(data *[MAX]Pemain, targetID int, kiri int, kanan int) int {
 	if kiri > kanan {
 		return -1
 	}
@@ -50,110 +49,158 @@ func BinarySearchRecursive(data []Pemain, targetID int, kiri int, kanan int) int
 	return BinarySearchRecursive(data, targetID, kiri, tengah-1)
 }
 
-// 4. PEMBUAT DATA DUMMY
-func BuatData(jumlah int) []Pemain {
-	daftarNama := []string{"Lionel Messi", "Cristiano Ronaldo", "Mbappe", "Haaland", "Neymar"}
-	daftarKlub := []string{"Inter Miami", "Al Nassr", "Real Madrid", "Man City", "Al Hilal"}
+func BuatData(hasil *[MAX]Pemain, jumlah int) {
+	var daftarNama [5]string
+	daftarNama[0] = "Lionel Messi"
+	daftarNama[1] = "Cristiano Ronaldo"
+	daftarNama[2] = "Mbappe"
+	daftarNama[3] = "Haaland"
+	daftarNama[4] = "Neymar"
 
-	var hasil []Pemain
+	var daftarKlub [5]string
+	daftarKlub[0] = "Inter Miami"
+	daftarKlub[1] = "Al Nassr"
+	daftarKlub[2] = "Real Madrid"
+	daftarKlub[3] = "Man City"
+	daftarKlub[4] = "Al Hilal"
 
-	// Loop biasa untuk isi data
-	for i := 0; i < jumlah; i++ {
-		var p Pemain
-		p.ID = (i + 1) * 10
-
-		// Ambil nama gantian (pakai sisa bagi/modulo)
+	i := 0
+	for i < jumlah {
+		hasil[i].ID = (i + 1) * 10
 		idx := i % 5
-		p.Nama = daftarNama[idx]
-		p.Klub = daftarKlub[idx]
-
-		hasil = append(hasil, p)
+		hasil[i].Nama = daftarNama[idx]
+		hasil[i].Klub = daftarKlub[idx]
+		i++
 	}
-	return hasil
 }
 
-// 5. FITUR BENCHMARK (INI YANG DIUBAH JADI LOOP BIASA)
-// 5. FITUR BENCHMARK (DIPERBAIKI BIAR GAK 0)
 func MulaiBenchmark() {
-	ukuran := []int{10, 100, 1000, 10000, 100000}
+	var ukuran [5]int
+	ukuran[0] = 10
+	ukuran[1] = 100
+	ukuran[2] = 1000
+	ukuran[3] = 10000
+	ukuran[4] = 100000
 
-	// Kita akan mengulang pencarian sebanyak 200.000 kali
-	// supaya waktunya bisa terukur (tidak 0 lagi)
 	pengulangan := 200000
 
-	fmt.Println("\n=== HASIL CEK KECEPATAN (Rata-rata Nanodetik) ===")
-	fmt.Printf("%-10s | %-15s | %-15s\n", "Jumlah Data", "Iteratif (ns)", "Rekursif (ns)")
-	fmt.Println("------------------------------------------------")
+	fmt.Println("\n=== HASIL BENCHMARK (Rata-rata Nanodetik per 1x pencarian) ===")
+	fmt.Println("Pengulangan per skenario =", pengulangan)
+	fmt.Printf("%-10s | %-10s | %-15s | %-15s\n", "N", "Skenario", "Iteratif (ns)", "Rekursif (ns)")
+	fmt.Println("---------------------------------------------------------------")
 
-	for i := 0; i < 5; i++ {
+	var data [MAX]Pemain
+
+	i := 0
+	for i < 5 {
 		n := ukuran[i]
+		BuatData(&data, n)
 
-		// 1. Buat Data
-		data := BuatData(n)
-		target := data[n-1].ID // Cari data paling ujung (paling susah)
+		targetAwal := data[0].ID
+		targetTengah := data[n/2].ID
+		targetAkhir := data[n-1].ID
+		targetTidakAda := data[n-1].ID + 7
 
-		// --- CEK ITERATIF ---
-		start1 := time.Now()
-		// Ulangi 200.000 kali biar kerasa berat
-		for k := 0; k < pengulangan; k++ {
-			BinarySearchIterative(data, target)
-		}
-		totalWaktu1 := time.Since(start1).Nanoseconds()
-		rataRata1 := totalWaktu1 / int64(pengulangan) // Hitung rata-rata per 1x cari
+		BenchmarkSkenario(&data, n, targetAwal, "Awal", pengulangan)
+		BenchmarkSkenario(&data, n, targetTengah, "Tengah", pengulangan)
+		BenchmarkSkenario(&data, n, targetAkhir, "Akhir", pengulangan)
+		BenchmarkSkenario(&data, n, targetTidakAda, "TidakAda", pengulangan)
 
-		// --- CEK REKURSIF ---
-		start2 := time.Now()
-		// Ulangi 200.000 kali juga
-		for k := 0; k < pengulangan; k++ {
-			BinarySearchRecursive(data, target, 0, len(data)-1)
-		}
-		totalWaktu2 := time.Since(start2).Nanoseconds()
-		rataRata2 := totalWaktu2 / int64(pengulangan) // Hitung rata-rata
-
-		// Cetak Hasil
-		fmt.Printf("%-10d | %-15d | %-15d\n", n, rataRata1, rataRata2)
+		fmt.Println("---------------------------------------------------------------")
+		i++
 	}
 
-	fmt.Println("------------------------------------------------")
-	fmt.Println("*Hasil adalah rata-rata waktu untuk 1x pencarian.")
+	fmt.Println("*Catatan: biasanya iteratif sedikit lebih cepat karena tidak ada overhead rekursi.")
 }
 
-// 6. MAIN MENU
+func BenchmarkSkenario(data *[MAX]Pemain, n int, target int, label string, pengulangan int) {
+
+	dummy := 0
+
+	start1 := time.Now()
+	k := 0
+	for k < pengulangan {
+		dummy = dummy + BinarySearchIterative(data, n, target)
+		k++
+	}
+	total1 := time.Since(start1).Nanoseconds()
+	rata1 := total1 / int64(pengulangan)
+
+	start2 := time.Now()
+	k = 0
+	for k < pengulangan {
+		dummy = dummy + BinarySearchRecursive(data, target, 0, n-1)
+		k++
+	}
+	total2 := time.Since(start2).Nanoseconds()
+	rata2 := total2 / int64(pengulangan)
+
+	if dummy == -999999 {
+		fmt.Println("dummy")
+	}
+
+	fmt.Printf("%-10d | %-10s | %-15d | %-15d\n", n, label, rata1, rata2)
+}
+
 func main() {
-	dataDemo := BuatData(20)
+	var dataDemo [MAX]Pemain
+	nDemo := 20
+	BuatData(&dataDemo, nDemo)
 
 	for {
 		fmt.Println("\n=== APLIKASI DATA PEMAIN BOLA ===")
 		fmt.Println("1. Lihat Data Pemain")
-		fmt.Println("2. Cari Pemain")
-		fmt.Println("3. Cek Kecepatan (Benchmark)")
-		fmt.Println("4. Keluar")
+		fmt.Println("2. Cari Pemain (Iteratif)")
+		fmt.Println("3. Cari Pemain (Rekursif)")
+		fmt.Println("4. Cek Kecepatan (Benchmark)")
+		fmt.Println("5. Keluar")
 		fmt.Print("Pilih menu: ")
 
 		var pilihan int
 		fmt.Scan(&pilihan)
 
 		if pilihan == 1 {
-			for i := 0; i < len(dataDemo); i++ {
+			i := 0
+			for i < nDemo {
 				p := dataDemo[i]
 				fmt.Printf("ID: %d | %s (%s)\n", p.ID, p.Nama, p.Klub)
+				i++
 			}
+
 		} else if pilihan == 2 {
-			fmt.Print("Masukkan ID: ")
+			fmt.Print("Masukkan ID (kelipatan 10, contoh: 10, 20, 30): ")
 			var cari int
 			fmt.Scan(&cari)
 
-			idx := BinarySearchIterative(dataDemo, cari)
+			idx := BinarySearchIterative(&dataDemo, nDemo, cari)
 			if idx != -1 {
 				p := dataDemo[idx]
-				fmt.Printf("Ketemu: %s (%s)\n", p.Nama, p.Klub)
+				fmt.Printf("Ketemu (Iteratif): %s (%s)\n", p.Nama, p.Klub)
 			} else {
 				fmt.Println("Tidak ditemukan")
 			}
+
 		} else if pilihan == 3 {
-			MulaiBenchmark()
+			fmt.Print("Masukkan ID (kelipatan 10, contoh: 10, 20, 30): ")
+			var cari int
+			fmt.Scan(&cari)
+
+			idx := BinarySearchRecursive(&dataDemo, cari, 0, nDemo-1)
+			if idx != -1 {
+				p := dataDemo[idx]
+				fmt.Printf("Ketemu (Rekursif): %s (%s)\n", p.Nama, p.Klub)
+			} else {
+				fmt.Println("Tidak ditemukan")
+			}
+
 		} else if pilihan == 4 {
+			MulaiBenchmark()
+
+		} else if pilihan == 5 {
 			return
+
+		} else {
+			fmt.Println("Pilihan tidak valid.")
 		}
 	}
 }
